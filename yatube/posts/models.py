@@ -52,15 +52,6 @@ class Post(models.Model):
         return self.text[:15]
 
 
-class Group(models.Model):
-    title = models.CharField(max_length=200)
-    slug = models.SlugField(unique=True)
-    description = models.TextField()
-
-    def __str__(self):
-        return self.title
-
-
 class Comment(models.Model):
     post = models.ForeignKey(
         'Post',
@@ -87,7 +78,7 @@ class Comment(models.Model):
     )
 
     class Meta:
-        ordering = ['-pub_date']
+        ordering = ['-created']
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
 

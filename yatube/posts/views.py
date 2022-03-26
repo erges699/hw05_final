@@ -1,4 +1,3 @@
-from xml.etree.ElementTree import Comment
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
@@ -7,7 +6,7 @@ from django.shortcuts import render
 from utils import pagination
 
 from .forms import PostForm, CommentForm
-from .models import Group, Post, Comment, User
+from .models import Group, Post, User
 
 
 def index(request):
@@ -42,12 +41,15 @@ def post_detail(request, post_id):
     post_obj = get_object_or_404(Post, id=post_id)
     post_count = Post.objects.filter(author=post_obj.author).count()
     current_user = request.user
-    comments = get_object_or_404(Comment, id=post_id)
+    form = CommentForm(request.POST or None)
+    comments = post_obj.comments.all()
     context = {
         'post_id': post_id,
         'post_obj': post_obj,
         'post_count': post_count,
         'current_user': current_user,
+        'form': form,
+        'comments': comments,
     }
     return render(request, 'posts/post_detail.html', context)
 
