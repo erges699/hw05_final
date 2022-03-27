@@ -7,7 +7,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 
-from posts.models import Group, Post
+from posts.models import Group, Post, Comment
 
 User = get_user_model()
 
@@ -118,6 +118,54 @@ class PostCreateFormTests(TestCase):
                 id=self.post.id,
                 group=form_data['group'],
                 text=form_data['text'],
-                image='posts/small.gif'
+                image='posts/small.gif',
             ).exists()
+        )
+
+
+class PostCommentTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = User.objects.create_user(username='auth')
+        cls.group = Group.objects.create(
+            title='test-group',
+            slug='test-slug',
+            description='Тестовое описание',
+        )
+        cls.post = Post.objects.create(
+            author=cls.user,
+            group=cls.group,
+            text='Тестовый пост',
+        )
+        cls.comment = Comment.objects.create(
+            post=cls.post,
+            author=cls.user,
+            text='Тестовый комментарий',
+        )
+
+    def setUp(self):
+        self.author_client = Client()
+        self.author_client.force_login(PostCommentTests.user)
+
+    def test_post_comment_appear(self):
+        """после успешной отправки комментарий появляется на странице поста
+        """
+        comments_count = self.post.comments.count()
+        form_data = {
+            'text': 'Тестовый комментарий поста',
+            'author': self.author_client,
+        }
+        response = self.author_client.post(
+            reverse('posts:add_comment', args=(self.post.id,)),
+            data=form_data,
+            follow=True
+        )
+        self.assertRedirects(response, reverse(
+            'posts:post_detail', args=(self.post.id,))
+        )
+        self.assertEqual(Comment.objects.count(), comments_count + 1)
+        self.assertEqual(
+            Comment.objects.order_by('-id')[0].text,
+            form_data['text']
         )

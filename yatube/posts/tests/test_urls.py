@@ -3,7 +3,7 @@ from django.test import TestCase, Client
 
 from http import HTTPStatus
 
-from ..models import Group, Post
+from ..models import Group, Post, Comment
 
 User = get_user_model()
 
@@ -98,3 +98,40 @@ class URLTests(TestCase):
             with self.subTest(address=address):
                 response = self.client.get(address)
                 self.assertEqual(response.status_code, status_codes)
+
+
+class PostCommentURLTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = User.objects.create_user(username='auth')
+        cls.group = Group.objects.create(
+            title='test-group',
+            slug='test-slug',
+            description='Тестовое описание',
+        )
+        cls.post = Post.objects.create(
+            author=cls.user,
+            group=cls.group,
+            text='Тестовый пост',
+        )
+        cls.comment = Comment.objects.create(
+            post=cls.post,
+            author=cls.user,
+            text='Тестовый комментарий',
+        )
+
+    def setUp(self):
+        self.authorized_client = Client()
+        self.authorized_client.force_login(PostCommentURLTests.user)
+        self.comment_edit_id = f'/posts/{PostCommentURLTests.post.id}/comment/'
+
+    def test_authorized_have_comment_edit_access(self):
+        """Проверяем, что авторизованному доступно комментирование постов."""
+        response = self.authorized_client.get(self.comment_edit_id)
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
+
+    def test_guest_have_url_access(self):
+        """Проверяем, что гостю недоступно комментирование постов."""
+        response = self.client.get(self.comment_edit_id)
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
