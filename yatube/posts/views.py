@@ -29,9 +29,11 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     post_list = Post.objects.filter(author=author)
     posts_count = author.posts.count()
+    following = True
     context = {
         'author': author,
         'posts_count': posts_count,
+        'following': following,
     }
     context.update(pagination(post_list, request))
     return render(request, 'posts/profile.html', context)
@@ -102,6 +104,7 @@ def add_comment(request, post_id):
         comment.save()
     return redirect('posts:post_detail', post_id=post_id)
 
+
 @login_required
 def follow_index(request):
     # информация о текущем пользователе доступна в переменной request.user
@@ -110,10 +113,12 @@ def follow_index(request):
     # return render(request, 'posts/follow.html', context)
     ...
 
+
 @login_required
 def profile_follow(request, username):
     # Подписаться на автора
     ...
+
 
 @login_required
 def profile_unfollow(request, username):
