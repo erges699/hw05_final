@@ -89,8 +89,7 @@ class Comment(models.Model):
 class Follow(models.Model):
     user = models.ForeignKey(
         User,
-        on_delete=models.SET_NULL,
-        null=True,
+        on_delete=models.CASCADE,
         verbose_name='Подписчик',
         related_name='follower',
         help_text='Пользователь, который подписывается',
@@ -104,8 +103,9 @@ class Follow(models.Model):
     )
 
     class Meta:
+        unique_together = ("user", "author")
+        constraints = [models.CheckConstraint(
+            check=~models.Q(user=models.F('author')),
+            name='follower_not_author'), ]
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
-
-    def __str__(self):
-        return self.text

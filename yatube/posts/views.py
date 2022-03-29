@@ -6,7 +6,7 @@ from django.shortcuts import render
 from utils import pagination
 
 from .forms import PostForm, CommentForm
-from .models import Group, Post, User
+from .models import Group, Post, User, Follow
 
 
 def index(request):
@@ -29,12 +29,18 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     post_list = Post.objects.filter(author=author)
     posts_count = author.posts.count()
-    following = True
     context = {
         'author': author,
         'posts_count': posts_count,
-        'following': following,
     }
+    if request.user.is_active:
+        following_list = Follow.objects.values('author').filter(
+            user=request.user)
+        if author in following_list:
+            following = True
+        else:
+            following = False
+        context.update({'following': following, })
     context.update(pagination(post_list, request))
     return render(request, 'posts/profile.html', context)
 
@@ -107,20 +113,24 @@ def add_comment(request, post_id):
 
 @login_required
 def follow_index(request):
-    # информация о текущем пользователе доступна в переменной request.user
-    # ...
-    # context = {}
-    # return render(request, 'posts/follow.html', context)
-    ...
+    followings = Follow.objects.values('author').filter(
+        user=request.user)
+    post_list = Post.objects.filter(author__in=followings)
+    context = pagination(post_list, request)
+    return render(request, 'posts/follow.html', context)
 
 
 @login_required
 def profile_follow(request, username):
-    # Подписаться на автора
-    ...
+    author = get_object_or_404(User, username=username)
+    new_following = Follow.objects.create(user=request.user, author=author)
+    new_following.save()
+    return redirect('posts:follow_index')
 
 
 @login_required
 def profile_unfollow(request, username):
-    # Дизлайк, отписка
-    ...
+    author = get_object_or_404(User, username=username)
+    new_unfollowing = Follow.objects.get(user=request.user, author=author)
+    new_unfollowing.delete()
+    return redirect('posts:follow_index')
