@@ -352,13 +352,13 @@ class FollowUnfollowTest(TestCase):
         self.authorized_client2 = Client()
         self.authorized_client2.force_login(self.user2)
         self.author_client = Client()
-        self.author_client.force_login(FollowUnfollowTest.user)
+        self.author_client.force_login(self.user)
 
     def author_cant_follow_self(self):
         """автор не может подписываться на себя.
         """
         self.author_client.get(
-            reverse('profile_follow', args=(self.post.author,))
+            reverse('profile_follow', args=(self.user,))
         )
         following = Follow.objects.filter(user=self.user)
         self.assertTrue(following.count() == 0)
