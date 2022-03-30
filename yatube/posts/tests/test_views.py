@@ -357,17 +357,11 @@ class FollowUnfollowTest(TestCase):
     def author_cant_follow_self(self):
         """автор не может подписываться на себя.
         """
-        following_count = Follow.objects.filter(
-            user=FollowUnfollowTest.user
-        ).count()
         self.author_client.get(
             reverse('profile_follow', args=(self.post.author,))
         )
-        self.assertEqual(
-            Follow.objects.filter(
-                user=FollowUnfollowTest.user
-            ).count(), following_count
-        )
+        follow_count = Follow.objects.filter(user=self.post.author).count()
+        self.assertTrue(follow_count == 0)
 
     def authorized_can_follow_and_unfollow(self):
         """авторизованный пользователь может подписываться на других
