@@ -360,8 +360,8 @@ class FollowUnfollowTest(TestCase):
         self.author_client.get(
             reverse('profile_follow', args=(self.post.author,))
         )
-        follow_count = Follow.objects.filter(user=self.post.author).count()
-        self.assertTrue(follow_count == 0)
+        following = Follow.objects.filter(user=self.user)
+        self.assertTrue(following.count() == 0)
 
     def authorized_can_follow_and_unfollow(self):
         """авторизованный пользователь может подписываться на других
