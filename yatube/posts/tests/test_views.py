@@ -336,13 +336,11 @@ class FollowUnfollowTest(TestCase):
             slug='test-slug',
             description='Тестовое описание',
         )
-        for i in range(13):
-            cls.text_str = 'Тестовый фолловерский пост' + str(i)
-            cls.post = Post.objects.create(
-                author=cls.user,
-                group=cls.group,
-                text=cls.text_str,
-            )
+        cls.post = Post.objects.create(
+            author=cls.user,
+            group=cls.group,
+            text='Тестовый фолловерский пост',
+        )
 
     def setUp(self):
         self.user1 = User.objects.create_user(username='TestPassoff')
@@ -357,8 +355,10 @@ class FollowUnfollowTest(TestCase):
     def author_cant_follow_self(self):
         """автор не может подписываться на себя.
         """
-        self.author_client.get(
-            reverse('profile_follow', args=(self.user,))
+        self.check_url(
+            self.author_client,
+            f'/profile/{self.post.author.username}/follow',
+            '/profile/<username>/follow/'
         )
         following = Follow.objects.filter(user=self.user)
         self.assertTrue(following.count() == 0)
