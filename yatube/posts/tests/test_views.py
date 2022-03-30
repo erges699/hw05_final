@@ -1,3 +1,4 @@
+from urllib import response
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 # from django.core.cache import cache
@@ -7,7 +8,7 @@ from django.urls import reverse
 
 from django import forms
 
-from ..models import Group, Post
+from ..models import Group, Post, Follow
 
 User = get_user_model()
 
@@ -324,3 +325,85 @@ class SORLTests(TestCase):
         # current_post.delete()
         # current_cache = cache.get('index_page')
         # self.assertContains(response.status_code, current_cache)
+
+
+class FollowUnfollowTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = User.objects.create_user(username='TestPassov')
+        cls.group = Group.objects.create(
+            title='Тестовая группа',
+            slug='test-slug',
+            description='Тестовое описание',
+        )
+        for i in range(13):
+            cls.text_str = 'Тестовый фолловерский пост' + str(i)
+            cls.post = Post.objects.create(
+                author=cls.user,
+                group=cls.group,
+                text=cls.text_str,
+            )
+
+    def setUp(self):
+        self.user1 = User.objects.create_user(username='TestPassoff')
+        self.authorized_client = Client()
+        self.authorized_client.force_login(self.user1)
+        self.user2 = User.objects.create_user(username='TtestPpassoff')
+        self.author_client = Client()
+        self.author_client.force_login(self.user2)
+
+    def authorized_can_follow_and_unfollow(self):
+        """авторизованный пользователь может подписываться на других
+        пользователей и удалять их из подписок.
+        """
+        following_count = Follow.objects.filter(user=self.user1).count()
+        self.authorized_client.get(
+            reverse('profile_follow', args=(self.post.author,))
+        )
+        self.assertEqual(
+            Follow.objects.filter(user=self.user1).count(), following_count + 1
+        )
+        self.assertEqual(
+            Follow.objects.order_by('-id')[0].user, self.user1
+        )
+        self.assertEqual(
+            Follow.objects.order_by('-id')[0].author, FollowUnfollowTest.user
+        )
+        self.authorized_client.get(
+            reverse('profile_unfollow', args=(self.post.author,))
+        )
+        self.assertEqual(
+            Follow.objects.filter(user=self.user1).count(), following_count
+        )
+
+    def authorized_can_follow_and_unfollow(self):
+        """новая запись пользователя появляется в ленте тех, кто на него подписан
+        и не появляется в ленте тех, кто не подписан.
+        """
+        user2_following_count = Follow.objects.filter(user=self.user2).count()
+        self.author_client.get(
+            reverse('profile_follow', args=(self.post.author,))
+        )
+        self.assertEqual(
+            Follow.objects.filter(user=self.user2).count(),
+            user2_following_count + 1
+        )
+        self.assertEqual(
+            Follow.objects.order_by('-id')[0].user, self.user2
+        )
+        self.assertEqual(
+            Follow.objects.order_by('-id')[0].author, FollowUnfollowTest.user
+        )
+        user2_response = self.author_client.get(reverse('posts:follow_index'))
+        user1_response = self.authorized_client.get(
+            reverse('posts:follow_index')
+        )
+        user2_post_object = user2_response['page_obj'][0]
+        user1_post_object = user1_response['page_obj'][0]
+        self.assertEqual(
+            user2_post_object.text, self.post.text
+        )
+        self.assertNotEqual(
+            user1_post_object.text, self.post.text
+        )
