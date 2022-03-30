@@ -1,7 +1,10 @@
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.cache import cache
 from django.conf import settings
 from django.test import TestCase, Client
 from django.urls import reverse
+
 from django import forms
 
 from ..models import Group, Post
@@ -237,3 +240,87 @@ class PostGroupTests(TestCase):
         first_object = response.context['page_obj'][0]
         post_group_0 = first_object.group.title
         self.assertEqual(post_group_0, self.group_title)
+
+
+class SORLTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = User.objects.create_user(username='TestPassov')
+        cls.group = Group.objects.create(
+            title='Тестовая группа',
+            slug='test-slug',
+            description='Тестовое описание',
+        )
+        cls.small_gif = (
+            b'\x47\x49\x46\x38\x39\x61\x02\x00'
+            b'\x01\x00\x80\x00\x00\x00\x00\x00'
+            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+            b'\x0A\x00\x3B'
+        )
+        cls.uploaded = SimpleUploadedFile(
+            name='small.gif',
+            content=cls.small_gif,
+            content_type='image/gif'
+        )
+        cls.post = Post.objects.create(
+            author=cls.user,
+            group=cls.group,
+            text='Тестовый пост',
+            image=cls.uploaded
+        )
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='TestPassoff')
+        self.authorized_client = Client()
+        self.authorized_client.force_login(self.user)
+
+    def test_show_index_post_with_image(self):
+        """При выводе поста с картинкой изображение передается в context
+        поста на главной странице.
+        """
+        response = self.authorized_client.get(reverse('posts:posts_main'))
+        self.assertEqual(response.context['page_obj'][0].image,
+                         self.post.image)
+
+    def test_show_posts_group_list_post_with_image(self):
+        """При выводе поста с картинкой изображение передается в context
+        поста на страницах группы.
+        """
+        response = self.authorized_client.get(reverse('posts:posts_group_list',
+                                              args=(self.post.group.slug,)))
+        self.assertEqual(response.context['page_obj'][0].image,
+                         self.post.image)
+
+    def test_show_profile_post_with_image(self):
+        """При выводе поста с картинкой изображение передается в context
+        поста на страницах профиля.
+        """
+        response = self.authorized_client.get(reverse('posts:profile',
+                                              args=(self.post.author,)))
+        self.assertEqual(response.context['page_obj'][0].image,
+                         self.post.image)
+
+    def test_show_post_detail_post_with_image(self):
+        """При выводе поста с картинкой изображение передается в context
+        поста на странице поста.
+        """
+        response = self.authorized_client.get(reverse('posts:post_detail',
+                                              args=(self.post.id,)))
+        self.assertEqual(response.context['post_obj'].image,
+                         self.post.image)
+
+    def test_cahe_index_page_post(self):
+        """при удалении записи из базы, она остаётся в response.content
+        главной страницы.
+        """
+        current_post = Post.objects.get(pk=self.post.pk)
+        response = self.authorized_client.get(
+            reverse('posts:posts_main')
+        )
+        self.assertEqual(response.context['page_obj'][0], current_post)
+        # current_post.delete()
+        # current_cache = cache.get('index_page')
+        # self.assertContains(response.status_code, current_cache)

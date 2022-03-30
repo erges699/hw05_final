@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
+# from django.views.decorators.cache import cache_page
 
 from utils import pagination
 
@@ -9,6 +10,7 @@ from .forms import PostForm, CommentForm
 from .models import Group, Post, User, Follow
 
 
+# @cache_page(20, key_prefix="index_page")
 def index(request):
     post_list = Post.objects.all()
     context = pagination(post_list, request)
