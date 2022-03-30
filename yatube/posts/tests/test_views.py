@@ -349,8 +349,25 @@ class FollowUnfollowTest(TestCase):
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user1)
         self.user2 = User.objects.create_user(username='TtestPpassoff')
+        self.authorized_client2 = Client()
+        self.authorized_client2.force_login(self.user2)
         self.author_client = Client()
-        self.author_client.force_login(self.user2)
+        self.author_client.force_login(FollowUnfollowTest.user)
+
+    def author_cant_follow_self(self):
+        """автор не может подписываться на себя.
+        """
+        following_count = Follow.objects.filter(
+            user=FollowUnfollowTest.user
+        ).count()
+        self.author_client.get(
+            reverse('profile_follow', args=(self.post.author,))
+        )
+        self.assertEqual(
+            Follow.objects.filter(
+                user=FollowUnfollowTest.user
+            ).count(), following_count
+        )
 
     def authorized_can_follow_and_unfollow(self):
         """авторизованный пользователь может подписываться на других
@@ -381,7 +398,7 @@ class FollowUnfollowTest(TestCase):
         и не появляется в ленте тех, кто не подписан.
         """
         user2_following_count = Follow.objects.filter(user=self.user2).count()
-        self.author_client.get(
+        self.authorized_client2.get(
             reverse('profile_follow', args=(self.post.author,))
         )
         self.assertEqual(
@@ -394,7 +411,9 @@ class FollowUnfollowTest(TestCase):
         self.assertEqual(
             Follow.objects.order_by('-id')[0].author, FollowUnfollowTest.user
         )
-        user2_response = self.author_client.get(reverse('posts:follow_index'))
+        user2_response = self.authorized_client2.get(
+            reverse('posts:follow_index')
+        )
         user1_response = self.authorized_client.get(
             reverse('posts:follow_index')
         )
