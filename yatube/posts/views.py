@@ -36,9 +36,9 @@ def profile(request, username):
         'posts_count': posts_count,
     }
     if request.user.is_active:
-        following_list = Follow.objects.values('author').filter(
-            user=request.user)
-        if following_list.count() == 1:
+        followings = Follow.objects.values('author').filter(user=request.user)
+        follow_count = followings.filter(author=author).count()
+        if follow_count >= 1:
             following = True
         else:
             following = False
@@ -125,16 +125,29 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
-    if not request.user == author:
-        new_following = Follow.objects.create(user=request.user, author=author)
-        new_following.save()
+    if author != request.user:
+        followings = Follow.objects.values('author').filter(
+            user=request.user)
+        follow_count = followings.filter(author=author).count()
+        if follow_count == 0:
+            new_following = Follow.objects.create(
+                user=request.user,
+                author=author
+            )
+            new_following.save()
     return redirect('posts:follow_index')
 
 
 @login_required
 def profile_unfollow(request, username):
     author = get_object_or_404(User, username=username)
-    if not request.user == author:
-        new_unfollowing = Follow.objects.get(user=request.user, author=author)
+    followings = Follow.objects.values('author').filter(
+        user=request.user)
+    follow_count = followings.filter(author=author).count()
+    if follow_count == 1:
+        new_unfollowing = Follow.objects.get(
+            user=request.user,
+            author=author
+        )
         new_unfollowing.delete()
     return redirect('posts:follow_index')

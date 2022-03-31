@@ -7,7 +7,7 @@
   {% block content %}
     <div class="container py-5">     
         <h1>Все посты пользователя {{ author }}</h1>
-        <h3>Всего постов: {{ posts_count }} </h3>
+        <h3>Всего постов: {{ posts_count }}</h3>
         {% include 'includes/funf_button.html' %}
           {% for post in page_obj %}
           <article>
