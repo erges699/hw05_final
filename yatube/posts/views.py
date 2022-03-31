@@ -38,7 +38,7 @@ def profile(request, username):
     if request.user.is_active:
         following_list = Follow.objects.values('author').filter(
             user=request.user)
-        if author in following_list:
+        if following_list.count() == 1:
             following = True
         else:
             following = False
