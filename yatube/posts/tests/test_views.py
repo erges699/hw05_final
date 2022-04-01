@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-# from django.core.cache import cache
+from django.core.cache import cache
 from django.conf import settings
+from django.shortcuts import get_object_or_404
 from django.test import TestCase, Client
 from django.urls import reverse
 
@@ -316,14 +317,13 @@ class SORLTests(TestCase):
         """при удалении записи из базы, она остаётся в response.content
         главной страницы.
         """
-        current_post = Post.objects.get(pk=self.post.pk)
+        current_post = get_object_or_404(Post.objects, pk=self.post.pk)
         response = self.authorized_client.get(
             reverse('posts:posts_main')
         )
         self.assertEqual(response.context['page_obj'][0], current_post)
-        # current_post.delete()
-        # current_cache = cache.get('index_page')
-        # self.assertContains(response.status_code, current_cache)
+        current_cache = cache.get('index_page')
+        self.assertContains(response.context['page_obj'][0], current_cache)
 
 
 class FollowUnfollowTest(TestCase):
@@ -351,21 +351,23 @@ class FollowUnfollowTest(TestCase):
         self.authorized_client2.force_login(self.user2)
         self.author_client = Client()
         self.author_client.force_login(self.user)
+        self.profile_follow = f'/profile/{self.post.author.username}/follow'
+        self.profile_follow_url = '/profile/<username>/follow/'
 
     def author_cant_follow_self(self):
         """автор не может подписываться на себя.
         """
         self.check_url(
             self.author_client,
-            f'/profile/{self.post.author.username}/follow',
-            '/profile/<username>/follow/'
+            self.profile_follow,
+            self.profile_follow_url
         )
         following = Follow.objects.filter(user=self.user)
         self.assertTrue(following.count() == 0)
 
-    def authorized_can_follow_and_unfollow(self):
+    def authorized_can_follow(self):
         """авторизованный пользователь может подписываться на других
-        пользователей и удалять их из подписок.
+        пользователей.
         """
         following_count = Follow.objects.filter(user=self.user1).count()
         self.authorized_client.get(
@@ -380,14 +382,19 @@ class FollowUnfollowTest(TestCase):
         self.assertEqual(
             Follow.objects.order_by('-id')[0].author, FollowUnfollowTest.user
         )
+
+    def authorized_can_unfollow(self):
+        """авторизованный пользователь удалять пользователей из подписок.
+        """
+        following_count = Follow.objects.filter(user=self.user1).count()
         self.authorized_client.get(
             reverse('profile_unfollow', args=(self.post.author,))
         )
         self.assertEqual(
-            Follow.objects.filter(user=self.user1).count(), following_count
+            Follow.objects.filter(user=self.user1).count(), following_count - 1
         )
 
-    def authorized_can_follow_and_unfollow(self):
+    def followings_appears_on_follow_users(self):
         """новая запись пользователя появляется в ленте тех, кто на него подписан
         и не появляется в ленте тех, кто не подписан.
         """
