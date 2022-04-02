@@ -1,7 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-# from django.core.cache import cache
-# from django.core.cache.utils import make_template_fragment_key
+from django.core.cache import cache
 from django.conf import settings
 # from django.shortcuts import get_object_or_404
 from django.test import TestCase, Client
@@ -314,23 +313,6 @@ class SORLTests(TestCase):
         self.assertEqual(response.context['post_obj'].image,
                          self.post.image)
 
-    def test_cahe_index_page_post(self):
-        """при удалении записи из базы, она остаётся в response.content
-        главной страницы.
-        """
-        # current_post = get_object_or_404(Post.objects, pk=self.post.pk)
-        # response = self.authorized_client.get(
-        #     reverse('posts:posts_main')
-        # )
-        # self.assertEqual(response.context['page_obj'][0], current_post)
-        # current_post.delete()
-        # key = make_template_fragment_key('index_page')
-        # response = self.authorized_client.get(
-        #    reverse('posts:posts_main')
-        # )
-        # current_post = response.context['page_obj'][0]
-        # self.assertTrue(cache.get(key), current_post).exists()
-
 
 class FollowUnfollowTest(TestCase):
     @classmethod
@@ -432,3 +414,52 @@ class FollowUnfollowTest(TestCase):
         self.assertNotEqual(
             user1_post_object.text, self.post.text
         )
+
+
+class CacheViewsTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = User.objects.create_user(username='TestPassoff')
+        cls.group = Group.objects.create(
+            title='Тестовая группа',
+            slug='test-slug',
+            description='Тестовое описание',
+        )
+        for i in range(13):
+            cls.text_str = 'Тестовый пост' + str(i)
+            cls.post = Post.objects.create(
+                author=cls.user,
+                group=cls.group,
+                text=cls.text_str,
+            )
+
+    def setUp(self):
+        self.authorized_client = Client()
+        self.authorized_client.force_login(self.user)
+
+    def test_cahe_index_page_post(self):
+        """при удалении записи из базы, она остаётся в response.content
+        главной страницы.
+        """
+        response = self.authorized_client.get(
+            reverse('posts:posts_main')
+        )
+        first_object = response.context['page_obj'][0]
+        self.assertEqual(response.context['page_obj'][0], first_object)
+        cont_1 = response.content
+        self.assertTrue(cont_1)
+        first_object.delete()
+        response2 = self.authorized_client.get(
+            reverse('posts:posts_main')
+        )
+        cont_2 = response2.content
+        self.assertTrue(cont_2)
+        self.assertEqual(cont_1, cont_2)
+        cache.clear()
+        response3 = self.authorized_client.get(
+            reverse('posts:posts_main')
+        )
+        cont_3 = response3.content
+        self.assertTrue(cont_3)
+        self.assertNotEqual(cont_1, cont_3)

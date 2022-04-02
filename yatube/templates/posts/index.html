@@ -5,11 +5,13 @@
     Последние обновления на сайте
   {% endblock %}
   {% block header %}Последние обновления на сайте{% endblock %}
+
   {% block content %}
+  {% cache 20 index_page with page_obj %}
     <div class="container py-5">     
         <h1>Последние обновления на сайте</h1>
         {% include 'includes/switcher.html' %}
-        {% cache 20 index_page with page_obj %}
+
           {% for post in page_obj %}
             <article>
               <ul>
@@ -33,8 +35,10 @@
               {% endif %}
               {% if not forloop.last %}<hr>{% endif %}
           {% endfor %}
-          {% endcache %}
+
           {% include 'includes/paginator.html' %}  
 
     </div>  
+  {% endcache %}
   {% endblock %}
+  
