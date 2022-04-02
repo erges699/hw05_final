@@ -4,7 +4,6 @@ from django.shortcuts import redirect
 from django.shortcuts import render
 
 from utils import pagination
-
 from .forms import PostForm, CommentForm
 from .models import Group, Post, User, Follow
 
@@ -34,10 +33,10 @@ def profile(request, username):
         'posts_count': posts_count,
     }
     if request.user.is_authenticated:
-        if Follow.objects.filter(user=request.user, author=author).exists():
-            following = True
-        else:
-            following = False
+        following = Follow.objects.filter(
+            user=request.user,
+            author=author
+        ).exists()
         context.update({'following': following, })
     context.update(pagination(post_list, request))
     return render(request, 'posts/profile.html', context)
