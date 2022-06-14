@@ -8,7 +8,7 @@ class AboutAuthorView(TemplateView):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Об авторе проекта'
         context['text'] = ('На создание этой страницы '
-                           'у меня ушло пять минут! Ай да я.')
+                           'у меня ушло пять минут! <br> Ай да я.')
         return context
 
 
