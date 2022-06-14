@@ -28,8 +28,8 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    '[::1]',
-    'testserver',
+    'www.erges699.pythonanywhere.com',
+    'erges699.pythonanywhere.com',
 ]
 
 
